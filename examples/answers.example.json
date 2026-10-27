@@ -1,0 +1,16 @@
+{
+  "PA-02": {"answer": "yes", "note": "Intune device inventory refreshes daily"},
+  "PA-03": {"answer": "yes", "note": "Tenable Nessus: daily external scan, weekly authenticated workstation scan"},
+  "PA-04": {"answer": "yes", "note": "Patch SLA report for September shows 96% within 14 days"},
+  "RA-03": {"answer": "yes", "note": "Privileged access requests go through ServiceNow with manager approval"},
+  "RA-04": {"answer": "yes", "note": "Proxy blocks the 'Tier 0/1 Admins' group; admin accounts have no mailbox"},
+  "RA-05": {"answer": "no", "note": "Admins use their normal laptop with RunAs; PAW rollout planned for Q1"},
+  "MF-01": {"answer": "yes", "note": "Entra Conditional Access policy 'Require MFA - all users'"},
+  "MF-02": {"answer": "yes", "note": "SaaS register shows SSO + MFA for all services holding council data"},
+  "MF-03": {"answer": "yes", "note": "Microsoft Authenticator number matching; SMS disabled"},
+  "MF-04": {"answer": "yes", "note": "Customer portal offers and defaults to app-based MFA"},
+  "BK-01": {"answer": "yes", "note": "Backup schedule documented per system in the BCP"},
+  "BK-02": {"answer": "yes", "note": "Veeam with immutable object storage, 30-day retention"},
+  "BK-03": {"answer": "yes", "note": "Restore test recorded in the June 2026 DR exercise"},
+  "BK-04": {"answer": "yes", "note": "Backup console limited to the Backup Admins group"}
+}
