@@ -1,0 +1,16 @@
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+build/
+dist/
+.pytest_cache/
+.ruff_cache/
+
+# Evidence and reports from real machines can contain usernames and software lists.
+# Keep them out of version control; the files in examples/ are synthetic.
+e8-evidence-*.json
+*-evidence.json
+*-report.html
+!examples/**
