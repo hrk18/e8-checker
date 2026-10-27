@@ -94,7 +94,7 @@ def load_answers(path: str | Path | None) -> dict[str, dict]:
     return {k: (v if isinstance(v, dict) else {"answer": v}) for k, v in data.items()}
 
 
-def _apply_answer(result: Result, answer: dict | None) -> Result:
+def _apply_answer(result: Result, answer: dict | None, remediation: str = "") -> Result:
     if answer is None:
         return result
     value = str(answer.get("answer", "")).strip().lower()
@@ -107,6 +107,7 @@ def _apply_answer(result: Result, answer: dict | None) -> Result:
     elif value in NO:
         result.status = Status.FAIL
         result.detail = "Assessor recorded this control as not implemented." + suffix
+        result.remediation = remediation
     return result
 
 
@@ -116,7 +117,7 @@ def assess(evidence: Evidence, answers: dict[str, dict] | None = None) -> Assess
     for spec in REGISTRY:
         result = spec.run(evidence)
         if spec.manual:
-            result = _apply_answer(result, answers.get(spec.check_id))
+            result = _apply_answer(result, answers.get(spec.check_id), spec.remediation)
         by_strategy[spec.strategy].append(result)
 
     verdicts = [

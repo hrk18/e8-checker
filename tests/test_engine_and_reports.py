@@ -31,6 +31,13 @@ def test_answers_resolve_manual_controls(hardened, answers):
     assert ra05.status is Status.FAIL and "PAW" in ra05.detail
 
 
+def test_no_answer_carries_remediation(hardened):
+    result = assess(hardened, {"RA-05": {"answer": "no"}})
+    ra05 = next(r for v in result.verdicts for r in v.results if r.check_id == "RA-05")
+    assert ra05.status is Status.FAIL
+    assert "privileged access workstations" in ra05.remediation
+
+
 def test_all_yes_answers_give_full_ml1(hardened, answers):
     answers["RA-05"] = {"answer": "yes"}
     assert assess(hardened, answers).overall_ml1
