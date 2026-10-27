@@ -1,0 +1,74 @@
+{
+  "schema_version": 1,
+  "collector_version": "0.1.0",
+  "collected_at": "2026-10-20T10:40:00",
+  "host": {
+    "hostname": "FIN-LT-042",
+    "domain_joined": true,
+    "interactive_user": "CORP\\j.citizen",
+    "interactive_user_is_admin": false,
+    "collector_elevated": true
+  },
+  "os": {
+    "caption": "Microsoft Windows 11 Enterprise",
+    "version": "10.0.26100",
+    "build": 26100,
+    "last_boot": "2026-10-15T07:55:40"
+  },
+  "hotfixes": [
+    {"id": "KB5067112", "installed_on": "2026-10-15"},
+    {"id": "KB5066835", "installed_on": "2026-09-10"}
+  ],
+  "windows_update": {"service_start_type": "Manual", "no_auto_update_policy": 0},
+  "software": [
+    {"name": "Microsoft 365 Apps for enterprise - en-us", "version": "16.0.19127.20154", "publisher": "Microsoft Corporation"},
+    {"name": "Microsoft Edge", "version": "141.0.3537.71", "publisher": "Microsoft Corporation"},
+    {"name": "Adobe Acrobat (64-bit)", "version": "25.001.20844", "publisher": "Adobe"}
+  ],
+  "local_admins": [
+    {"name": "FIN-LT-042\\Administrator", "enabled": true},
+    {"name": "CORP\\Workstation Admins", "enabled": true}
+  ],
+  "applocker": {
+    "appidsvc_running": true,
+    "collections": {
+      "Exe": {"mode": "Enabled", "rule_count": 14},
+      "Script": {"mode": "Enabled", "rule_count": 6},
+      "Msi": {"mode": "Enabled", "rule_count": 4},
+      "Dll": {"mode": "Enabled", "rule_count": 9}
+    }
+  },
+  "wdac": {"policy_present": false, "enforced": false},
+  "office": {
+    "installed": true,
+    "policy_present": true,
+    "macro_runtime_scan_scope": 2,
+    "apps": {
+      "Word": {"vba_warnings": 4, "block_internet_macros": 1},
+      "Excel": {"vba_warnings": 4, "block_internet_macros": 1},
+      "PowerPoint": {"vba_warnings": 4, "block_internet_macros": 1}
+    }
+  },
+  "browsers": {
+    "ie_enabled": false,
+    "edge": {
+      "installed": true,
+      "managed": true,
+      "forced_extensions": ["odfafepnkmbhccpbejgmiehpchacaeak;https://edge.microsoft.com/extensionwebstorebase/v1/crx"]
+    },
+    "chrome": {"installed": false},
+    "firefox": {"installed": false}
+  },
+  "defender": {
+    "antivirus_enabled": true,
+    "realtime_enabled": true,
+    "signature_age_days": 0,
+    "third_party_av": null
+  },
+  "firewall": [
+    {"profile": "Domain", "enabled": true},
+    {"profile": "Private", "enabled": true},
+    {"profile": "Public", "enabled": true}
+  ],
+  "bitlocker": {"os_volume_protection": "On"}
+}

@@ -1,0 +1,73 @@
+{
+  "schema_version": 1,
+  "collector_version": "0.1.0",
+  "collected_at": "2026-10-20T09:15:00",
+  "host": {
+    "hostname": "RECEPTION-PC01",
+    "domain_joined": false,
+    "interactive_user": "RECEPTION-PC01\\frontdesk",
+    "interactive_user_is_admin": true,
+    "collector_elevated": true
+  },
+  "os": {
+    "caption": "Microsoft Windows 10 Pro",
+    "version": "10.0.19045",
+    "build": 19045,
+    "last_boot": "2026-10-19T08:02:11"
+  },
+  "hotfixes": [
+    {"id": "KB5066791", "installed_on": "2026-08-14"},
+    {"id": "KB5065429", "installed_on": "2026-07-10"}
+  ],
+  "windows_update": {"service_start_type": "Disabled", "no_auto_update_policy": 1},
+  "software": [
+    {"name": "Microsoft Office Professional Plus 2016", "version": "16.0.4266.1001", "publisher": "Microsoft Corporation"},
+    {"name": "Adobe Flash Player 32 NPAPI", "version": "32.0.0.465", "publisher": "Adobe"},
+    {"name": "Google Chrome", "version": "141.0.7390.66", "publisher": "Google LLC"},
+    {"name": "Java 8 Update 471", "version": "8.0.4710.9", "publisher": "Oracle Corporation"},
+    {"name": "7-Zip 24.08 (x64)", "version": "24.08", "publisher": "Igor Pavlov"}
+  ],
+  "local_admins": [
+    {"name": "RECEPTION-PC01\\Administrator", "enabled": true},
+    {"name": "RECEPTION-PC01\\frontdesk", "enabled": true},
+    {"name": "RECEPTION-PC01\\itsupport", "enabled": true}
+  ],
+  "applocker": {
+    "appidsvc_running": false,
+    "collections": {
+      "Exe": {"mode": "AuditOnly", "rule_count": 3},
+      "Script": {"mode": "NotConfigured", "rule_count": 0},
+      "Msi": {"mode": "NotConfigured", "rule_count": 0},
+      "Dll": {"mode": "NotConfigured", "rule_count": 0}
+    }
+  },
+  "wdac": {"policy_present": false, "enforced": false},
+  "office": {
+    "installed": true,
+    "policy_present": false,
+    "macro_runtime_scan_scope": null,
+    "apps": {
+      "Word": {"vba_warnings": null, "block_internet_macros": null},
+      "Excel": {"vba_warnings": null, "block_internet_macros": null},
+      "PowerPoint": {"vba_warnings": null, "block_internet_macros": null}
+    }
+  },
+  "browsers": {
+    "ie_enabled": true,
+    "edge": {"installed": true, "managed": false, "forced_extensions": []},
+    "chrome": {"installed": true, "managed": false, "forced_extensions": []},
+    "firefox": {"installed": false}
+  },
+  "defender": {
+    "antivirus_enabled": true,
+    "realtime_enabled": false,
+    "signature_age_days": 23,
+    "third_party_av": null
+  },
+  "firewall": [
+    {"profile": "Domain", "enabled": true},
+    {"profile": "Private", "enabled": true},
+    {"profile": "Public", "enabled": false}
+  ],
+  "bitlocker": {"os_volume_protection": "Off"}
+}
