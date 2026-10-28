@@ -24,6 +24,11 @@ def weak_data() -> dict:
 
 
 @pytest.fixture
+def partial_data() -> dict:
+    return copy.deepcopy(_load("evidence-partial.json"))
+
+
+@pytest.fixture
 def hardened(hardened_data) -> Evidence:
     return Evidence(hardened_data)
 
@@ -31,6 +36,11 @@ def hardened(hardened_data) -> Evidence:
 @pytest.fixture
 def weak(weak_data) -> Evidence:
     return Evidence(weak_data)
+
+
+@pytest.fixture
+def partial(partial_data) -> Evidence:
+    return Evidence(partial_data)
 
 
 @pytest.fixture
