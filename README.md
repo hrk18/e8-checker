@@ -26,7 +26,8 @@ Remediation priorities
 ```
 
 See full sample reports: [weak workstation](examples/report-weak.md) ·
-[hardened laptop](examples/report-hardened.md) · [HTML version](examples/report-hardened.html)
+[hardened laptop](examples/report-hardened.md) · [HTML version](examples/report-hardened.html) ·
+[three-host fleet summary](examples/fleet-report.md)
 
 ## How it works
 
@@ -70,6 +71,7 @@ Try it without Windows using the synthetic samples:
 pip install .
 e8checker assess examples/evidence-weak.json
 e8checker assess examples/evidence-hardened.json -a examples/answers.example.json -f html -o report.html
+e8checker fleet examples/evidence-*.json -a examples/answers.example.json
 e8checker list-checks
 ```
 
@@ -79,6 +81,22 @@ e8checker list-checks
 | `-f, --format` | `markdown` (default), `html` or `json` |
 | `-o, --output FILE` | Write the report to a file instead of stdout |
 | `--fail-under N` | Exit with code 2 if fewer than N strategies reach ML1, for use in pipelines |
+
+### Many machines at once
+
+Collect evidence from each machine into one folder, then:
+
+```bash
+e8checker fleet ./evidence/ -a answers.json -f html -o fleet.html
+e8checker fleet ./evidence/ -f csv -o fleet.csv   # one row per host, for Excel or Power BI
+```
+
+The fleet summary shows how many hosts meet ML1, coverage per strategy, a host-by-strategy
+matrix (weakest host first) and **the fixes that would help the most hosts**, which is usually the
+first thing a security lead asks. Files that are not valid evidence are skipped with a warning
+rather than stopping the run, and hostnames that appear twice are flagged as possible re-scans.
+`fleet` accepts the same answers file as `assess`, applied to every host, because MFA and backup
+controls are organisation-wide.
 
 ## What it checks
 
@@ -117,9 +135,10 @@ Full list with NIST CSF 2.0 and ISO 27001 references: [docs/control-mapping.md](
 collector/Collect-E8Evidence.ps1   Read-only evidence collector (PowerShell 5.1 and 7)
 e8checker/checks/                  One module per strategy; each check is a small pure function
 e8checker/engine.py                Runs checks, applies answers, rolls up maturity
-e8checker/report/                  Markdown, HTML and JSON renderers
+e8checker/fleet.py                 Assesses many evidence files and ranks the most common failures
+e8checker/report/                  Markdown, HTML, JSON and CSV renderers
 e8checker/lifecycle.py             Windows end-of-servicing dates
-tests/                             pytest suite (100+ cases) using synthetic evidence
+tests/                             pytest suite (130 cases) using synthetic evidence
 .github/workflows/ci.yml           Lint and test on Python 3.10-3.13; runs the collector on a real Windows runner
 ```
 
@@ -127,7 +146,8 @@ tests/                             pytest suite (100+ cases) using synthetic evi
 
 - Maturity Level One only. ML2 and ML3 add requirements (for example event logging and
   centralised analysis) that need more than one endpoint's evidence.
-- One endpoint at a time. A fleet view would aggregate many evidence files.
+- Evidence is collected per machine; at scale, deploy the collector with Intune, SCCM or a GPO
+  startup script and copy the JSON files to one share for `e8checker fleet`.
 - Nested domain groups in local Administrators are only expanded when the collector runs as the
   logged-on user.
 - The lifecycle and unsupported-software tables need periodic updates.
@@ -136,7 +156,7 @@ tests/                             pytest suite (100+ cases) using synthetic evi
 
 ## Roadmap
 
-- [ ] Aggregate many evidence files into a fleet summary (CSV and HTML)
+- [x] Aggregate many evidence files into a fleet summary (Markdown, HTML and CSV)
 - [ ] Maturity Level Two checks (PowerShell logging, LSA protection, credential guard)
 - [ ] Intune / Microsoft Graph collector for cloud-managed devices
 

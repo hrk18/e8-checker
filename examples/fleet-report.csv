@@ -1,0 +1,4 @@
+hostname,collected_at,Application control,Patch applications,Configure Microsoft Office macro settings,User application hardening,Restrict administrative privileges,Patch operating systems,Multi-factor authentication,Regular backups,strategies_at_ml1
+RECEPTION-PC01,2026-10-20T09:15:00,no,no,no,no,no,no,yes,yes,2
+LIB-PC07,2026-10-21T14:05:00,no,yes,no,no,no,no,yes,yes,3
+FIN-LT-042,2026-10-20T10:40:00,yes,yes,yes,yes,no,yes,yes,yes,7
