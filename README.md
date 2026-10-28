@@ -114,6 +114,9 @@ controls are organisation-wide.
 
 Full list with NIST CSF 2.0 and ISO 27001 references: [docs/control-mapping.md](docs/control-mapping.md).
 
+New to the code? [docs/how-it-works.md](docs/how-it-works.md) walks through one check end to end and
+explains the reasoning behind each design decision.
+
 ## Design decisions
 
 - **Honest verdicts.** Missing evidence is `ERROR` and organisational controls are `MANUAL`; both
