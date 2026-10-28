@@ -6,6 +6,7 @@ from pathlib import Path
 
 from conftest import EXAMPLES
 
+from e8checker.cli import main
 from e8checker.fleet import assess_fleet, find_evidence_files
 from e8checker.models import Strategy
 from e8checker.report.fleet import render_fleet_csv, render_fleet_html, render_fleet_markdown
@@ -116,3 +117,25 @@ def test_fleet_csv_neutralises_formula_injection(tmp_path, weak_data):
     (tmp_path / "evil.json").write_text(json.dumps(weak_data), encoding="utf-8")
     body = render_fleet_csv(assess_fleet([tmp_path])).splitlines()[1]
     assert body.startswith("\"'=HYPERLINK")
+
+
+# --- Command line --------------------------------------------------------------------------
+
+
+def test_cli_fleet_writes_csv(tmp_path, capsys):
+    out = tmp_path / "fleet.csv"
+    assert main(["fleet", str(_fleet_dir(tmp_path)), "-f", "csv", "-o", str(out)]) == 0
+    assert out.read_text(encoding="utf-8").startswith("hostname,")
+    assert "0/3 hosts fully at ML1" in capsys.readouterr().err
+
+
+def test_cli_fleet_warns_about_skipped_files(tmp_path, capsys):
+    folder = _fleet_dir(tmp_path)
+    (folder / "broken.json").write_text("{", encoding="utf-8")
+    assert main(["fleet", str(folder)]) == 0
+    assert "warning: skipped" in capsys.readouterr().err
+
+
+def test_cli_fleet_with_no_evidence_fails(tmp_path, capsys):
+    assert main(["fleet", str(tmp_path)]) == 1
+    assert "no valid evidence" in capsys.readouterr().err

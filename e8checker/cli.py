@@ -10,6 +10,7 @@ from e8checker import __version__
 from e8checker.engine import assess, load_answers
 from e8checker.evidence import Evidence, EvidenceError
 from e8checker.report import RENDERERS
+from e8checker.report.fleet import FLEET_RENDERERS
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -32,6 +33,12 @@ def build_parser() -> argparse.ArgumentParser:
         help="Exit with code 2 if fewer than N strategies reach ML1 (for pipelines)",
     )
 
+    fleet = sub.add_parser("fleet", help="Assess many evidence files and write a fleet summary")
+    fleet.add_argument("inputs", nargs="+", type=Path, help="Evidence files and/or folders of *.json files")
+    fleet.add_argument("-a", "--answers", type=Path, help="JSON answers for manual controls (applied to every host)")
+    fleet.add_argument("-f", "--format", choices=sorted(FLEET_RENDERERS), default="markdown")
+    fleet.add_argument("-o", "--output", type=Path, help="Write the summary here (default: stdout)")
+
     sub.add_parser("list-checks", help="List every check and its framework mappings")
     return parser
 
@@ -46,10 +53,42 @@ def _list_checks() -> int:
     return 0
 
 
+def _write(text: str, output: Path | None, summary: str) -> None:
+    if output:
+        output.write_text(text, encoding="utf-8")
+        print(f"{summary} Report written to {output}", file=sys.stderr)
+    else:
+        sys.stdout.write(text)
+
+
+def _fleet(args: argparse.Namespace) -> int:
+    from e8checker.fleet import assess_fleet
+
+    try:
+        answers = load_answers(args.answers)
+    except (OSError, ValueError) as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 1
+    summary = assess_fleet(args.inputs, answers)
+    for skipped in summary.skipped:
+        print(f"warning: skipped {skipped.path}: {skipped.reason}", file=sys.stderr)
+    if summary.host_count == 0:
+        print("error: no valid evidence files found", file=sys.stderr)
+        return 1
+    _write(
+        FLEET_RENDERERS[args.format](summary),
+        args.output,
+        f"{summary.hosts_fully_ml1}/{summary.host_count} hosts fully at ML1.",
+    )
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
     if args.command == "list-checks":
         return _list_checks()
+    if args.command == "fleet":
+        return _fleet(args)
 
     try:
         evidence = Evidence.from_file(args.evidence)
@@ -59,16 +98,11 @@ def main(argv: list[str] | None = None) -> int:
         return 1
 
     assessment = assess(evidence, answers)
-    report = RENDERERS[args.format](assessment)
-    if args.output:
-        args.output.write_text(report, encoding="utf-8")
-        print(
-            f"{assessment.strategies_at_ml1}/{len(assessment.verdicts)} strategies at ML1. "
-            f"Report written to {args.output}",
-            file=sys.stderr,
-        )
-    else:
-        sys.stdout.write(report)
+    _write(
+        RENDERERS[args.format](assessment),
+        args.output,
+        f"{assessment.strategies_at_ml1}/{len(assessment.verdicts)} strategies at ML1.",
+    )
 
     if args.fail_under is not None and assessment.strategies_at_ml1 < args.fail_under:
         return 2
