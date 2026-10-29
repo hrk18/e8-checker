@@ -11,7 +11,7 @@ likely to ask. Read it alongside `e8checker/engine.py` and one checks module (st
 > local admins and so on) into a JSON file. A Python tool then runs 34 checks against that evidence,
 > decides which of the eight strategies reach ML1, and writes a report where every finding has a fix
 > and a NIST CSF 2.0 and ISO 27001 reference. It can also summarise a whole fleet and tell you which
-> fix would help the most machines.
+> fix would help the most machines, and compare two reports to show what remediation actually fixed.
 
 ## The pieces
 
@@ -24,6 +24,8 @@ flowchart TD
     ENG --> REP["report/<br/>Markdown, HTML, JSON"]
     ENG --> FLEET["fleet.py<br/>many hosts, ranked failures"]
     FLEET --> FREP["report/fleet.py<br/>Markdown, HTML, CSV"]
+    Q["questionnaire.py<br/>asks the 14 manual controls"] --> ANS
+    REP -->|JSON reports, before and after| CMP["compare.py<br/>fixed, regressed, still open"]
 ```
 
 | File | Job | Why it is separate |
@@ -34,6 +36,8 @@ flowchart TD
 | `e8checker/checks/base.py` | The `@check` decorator and registry | Title, severity, fix and framework mappings live next to the logic, so reports never drift |
 | `e8checker/engine.py` | Runs all checks, applies manual answers, works out each strategy's verdict | The only place the "is this ML1?" rule lives |
 | `e8checker/fleet.py` | Assesses a folder of evidence files and ranks the most common failures | Answers fleet-level questions without changing single-host logic |
+| `e8checker/compare.py` | Diffs two JSON reports for the same host | Works on saved reports, so it still works after the evidence or the rules change |
+| `e8checker/questionnaire.py` | Asks each manual control, validates the answer, records evidence | A typo in a hand-written answers file is silently ignored; a guided prompt cannot make that mistake |
 | `e8checker/report/` | Turns results into Markdown, HTML, JSON and CSV | Output format is independent of assessment logic |
 
 ## Following one check end to end (AC-01, application control)
@@ -102,6 +106,12 @@ Manual controls (MFA, backups, privileged-access processes) are resolved by an a
 - **Edition-aware lifecycle.** Windows 11 24H2 Home/Pro and Enterprise reach end of servicing a year
   apart, and Windows Server 2025 shares a build number with Windows 11 24H2. The lookup uses edition
   and family, not just build number.
+- **Compare works on reports, not evidence.** A saved JSON report records what the rules said at
+  the time. Comparing reports means a before/after view still makes sense after e8checker gains new
+  checks: they show up as "new checks" instead of looking like regressions.
+- **The questionnaire never overwrites by accident.** It refuses to replace an existing answers file
+  unless told `--update` (keep and revise) or `--force` (start again), and if input stops early it
+  keeps every answer already given.
 - **Fleet failures exclude manual controls.** "Not answered yet" is not the same as "broken", so the
   ranked fix list only counts FAIL and ERROR.
 
@@ -153,13 +163,24 @@ restricted share, and run `e8checker fleet` over the folder. The CSV output goes
 Power BI for trend tracking. The next step would be a Microsoft Graph collector for Intune-managed
 devices.
 
+**How would you show that remediation is working?**
+Save a JSON report before the change window and another after, then run `e8checker compare`. It
+shows the ML1 count moving, which controls were fixed and, more importantly, anything that
+regressed. With `--fail-on-regression` the same command can run on a schedule and alert when a
+Group Policy change quietly undoes a control.
+
+**How do you handle controls a script cannot see, like MFA?**
+They are marked MANUAL and block ML1 until someone answers them. `e8checker questionnaire` asks
+each one and records an evidence note (for example the Conditional Access policy name), so the
+report shows not just "yes" but why the assessor believed it.
+
 **What security risks does the tool itself have, and how did you handle them?**
 The evidence file is untrusted, so output is escaped (HTML, Markdown and CSV formula injection).
 The collector is read-only and makes no network calls. Evidence files contain usernames and
 software lists, so `.gitignore` keeps real ones out of the repository and `SECURITY.md` explains it.
 
 **How did you test it?**
-130 pytest cases with three synthetic hosts (weak, partial, hardened). Every automated check
+154 pytest cases with three synthetic hosts (weak, partial, hardened). Every automated check
 must pass on the hardened host, fail with a fix on the weak host, and not crash on empty evidence.
 Edge cases cover patch-window boundaries, audit mode, edition-specific lifecycle dates and
 injection attempts. CI runs the suite on Python 3.10 to 3.13 and runs the collector on a real

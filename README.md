@@ -72,6 +72,7 @@ pip install .
 e8checker assess examples/evidence-weak.json
 e8checker assess examples/evidence-hardened.json -a examples/answers.example.json -f html -o report.html
 e8checker fleet examples/evidence-*.json -a examples/answers.example.json
+e8checker questionnaire -o my-answers.json
 e8checker list-checks
 ```
 
@@ -97,6 +98,32 @@ first thing a security lead asks. Files that are not valid evidence are skipped 
 rather than stopping the run, and hostnames that appear twice are flagged as possible re-scans.
 `fleet` accepts the same answers file as `assess`, applied to every host, because MFA and backup
 controls are organisation-wide.
+
+### Answering the manual controls
+
+```bash
+e8checker questionnaire -o answers.json            # asks all 14, in ASD order
+e8checker questionnaire -o answers.json --update   # revisit; Enter keeps each previous answer
+```
+
+Each answer is validated (y / n / skip) and paired with an evidence note, such as a Conditional
+Access policy name, a scan report or a ticket number. That note appears in the report beside the
+verdict, which is what an auditor asks for. The command refuses to overwrite an existing file
+unless you pass `--update` or `--force`, and it reads piped input, so scripted runs work too.
+
+### Measuring progress
+
+```bash
+e8checker assess evidence-oct.json -f json -o report-oct.json
+# ... remediation work ...
+e8checker assess evidence-nov.json -f json -o report-nov.json
+e8checker compare report-oct.json report-nov.json --fail-on-regression
+```
+
+`compare` shows the change in strategies at ML1, each strategy's verdict before and after, and
+which checks were fixed, which regressed and which are still open. Regressions are listed first.
+With `--fail-on-regression` it exits with code 2 when a control that passed before now fails, so
+it can gate a change pipeline or a scheduled compliance job.
 
 ## What it checks
 
@@ -139,9 +166,11 @@ collector/Collect-E8Evidence.ps1   Read-only evidence collector (PowerShell 5.1 
 e8checker/checks/                  One module per strategy; each check is a small pure function
 e8checker/engine.py                Runs checks, applies answers, rolls up maturity
 e8checker/fleet.py                 Assesses many evidence files and ranks the most common failures
+e8checker/compare.py               Diffs two JSON reports: fixed, regressed, still open
+e8checker/questionnaire.py         Asks the 14 manual controls and writes answers.json
 e8checker/report/                  Markdown, HTML, JSON and CSV renderers
 e8checker/lifecycle.py             Windows end-of-servicing dates
-tests/                             pytest suite (130 cases) using synthetic evidence
+tests/                             pytest suite (154 cases) using synthetic evidence
 .github/workflows/ci.yml           Lint and test on Python 3.10-3.13; runs the collector on a real Windows runner
 ```
 
