@@ -39,6 +39,16 @@ def build_parser() -> argparse.ArgumentParser:
     fleet.add_argument("-f", "--format", choices=sorted(FLEET_RENDERERS), default="markdown")
     fleet.add_argument("-o", "--output", type=Path, help="Write the summary here (default: stdout)")
 
+    cmp = sub.add_parser("compare", help="Compare two JSON reports for the same host (before and after)")
+    cmp.add_argument("before", type=Path, help="Older report from: e8checker assess -f json")
+    cmp.add_argument("after", type=Path, help="Newer report from: e8checker assess -f json")
+    cmp.add_argument("-o", "--output", type=Path, help="Write the comparison here (default: stdout)")
+    cmp.add_argument(
+        "--fail-on-regression",
+        action="store_true",
+        help="Exit with code 2 if any control that passed before fails now (for pipelines)",
+    )
+
     sub.add_parser("list-checks", help="List every check and its framework mappings")
     return parser
 
@@ -83,12 +93,33 @@ def _fleet(args: argparse.Namespace) -> int:
     return 0
 
 
+def _compare(args: argparse.Namespace) -> int:
+    from e8checker.compare import compare, load_report
+    from e8checker.report.compare import render_compare_markdown
+
+    try:
+        result = compare(load_report(args.before), load_report(args.after))
+    except ValueError as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 1
+    if not result.same_host:
+        print(f"warning: comparing different hosts ({result.before_host} vs {result.after_host})", file=sys.stderr)
+    _write(
+        render_compare_markdown(result),
+        args.output,
+        f"{len(result.fixed)} fixed, {len(result.regressed)} regressed.",
+    )
+    return 2 if args.fail_on_regression and result.regressed else 0
+
+
 def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
     if args.command == "list-checks":
         return _list_checks()
     if args.command == "fleet":
         return _fleet(args)
+    if args.command == "compare":
+        return _compare(args)
 
     try:
         evidence = Evidence.from_file(args.evidence)
