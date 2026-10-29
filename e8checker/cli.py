@@ -49,6 +49,11 @@ def build_parser() -> argparse.ArgumentParser:
         help="Exit with code 2 if any control that passed before fails now (for pipelines)",
     )
 
+    q = sub.add_parser("questionnaire", help="Answer the manual controls interactively and write answers.json")
+    q.add_argument("-o", "--output", type=Path, required=True, help="Answers file to write")
+    q.add_argument("--update", action="store_true", help="Start from the answers already in --output")
+    q.add_argument("--force", action="store_true", help="Overwrite --output without reading it")
+
     sub.add_parser("list-checks", help="List every check and its framework mappings")
     return parser
 
@@ -112,6 +117,37 @@ def _compare(args: argparse.Namespace) -> int:
     return 2 if args.fail_on_regression and result.regressed else 0
 
 
+def _questionnaire(args: argparse.Namespace) -> int:
+    import json
+
+    from e8checker.questionnaire import manual_controls, run_questionnaire
+
+    existing: dict[str, dict] = {}
+    if args.output.exists():
+        if args.update:
+            try:
+                existing = load_answers(args.output)
+            except (OSError, ValueError) as exc:
+                print(f"error: {exc}", file=sys.stderr)
+                return 1
+        elif not args.force:
+            print(f"error: {args.output} exists; use --update to edit it or --force to replace it", file=sys.stderr)
+            return 1
+
+    print(f"{len(manual_controls())} controls cannot be checked from an endpoint. Answer each one;")
+    print("note the evidence (policy name, report, ticket number) an auditor would ask for.")
+    result = run_questionnaire(input, print, existing)
+
+    args.output.write_text(json.dumps(result.answers, indent=2) + "\n", encoding="utf-8")
+    if not result.complete:
+        print("warning: input ended early; unanswered controls were left out", file=sys.stderr)
+    print(
+        f"{len(result.answers)} answered, {len(result.skipped)} skipped. Answers written to {args.output}",
+        file=sys.stderr,
+    )
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
     if args.command == "list-checks":
@@ -120,6 +156,8 @@ def main(argv: list[str] | None = None) -> int:
         return _fleet(args)
     if args.command == "compare":
         return _compare(args)
+    if args.command == "questionnaire":
+        return _questionnaire(args)
 
     try:
         evidence = Evidence.from_file(args.evidence)
