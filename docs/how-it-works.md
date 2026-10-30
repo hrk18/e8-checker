@@ -12,6 +12,7 @@ likely to ask. Read it alongside `e8checker/engine.py` and one checks module (st
 > decides which of the eight strategies reach ML1, and writes a report where every finding has a fix
 > and a NIST CSF 2.0 and ISO 27001 reference. It can also summarise a whole fleet and tell you which
 > fix would help the most machines, and compare two reports to show what remediation actually fixed.
+> With `--level 2` it also reports Maturity Level Two readiness for the parts of ML2 an endpoint can show.
 
 ## The pieces
 
@@ -36,6 +37,7 @@ flowchart TD
 | `e8checker/checks/base.py` | The `@check` decorator and registry | Title, severity, fix and framework mappings live next to the logic, so reports never drift |
 | `e8checker/engine.py` | Runs all checks, applies manual answers, works out each strategy's verdict | The only place the "is this ML1?" rule lives |
 | `e8checker/fleet.py` | Assesses a folder of evidence files and ranks the most common failures | Answers fleet-level questions without changing single-host logic |
+| `e8checker/checks/level2.py` | Opt-in ML2 checks: Defender ASR rules, PowerShell logging, process creation auditing, LAPS | Kept apart so Level Two can never change the ML1 verdict |
 | `e8checker/compare.py` | Diffs two JSON reports for the same host | Works on saved reports, so it still works after the evidence or the rules change |
 | `e8checker/questionnaire.py` | Asks each manual control, validates the answer, records evidence | A typo in a hand-written answers file is silently ignored; a guided prompt cannot make that mistake |
 | `e8checker/report/` | Turns results into Markdown, HTML, JSON and CSV | Output format is independent of assessment logic |
@@ -112,12 +114,20 @@ Manual controls (MFA, backups, privileged-access processes) are resolved by an a
 - **The questionnaire never overwrites by accident.** It refuses to replace an existing answers file
   unless told `--update` (keep and revise) or `--force` (start again), and if input stops early it
   keeps every answer already given.
+- **Level Two is readiness, not a verdict.** ML2 includes central logging, event analysis and access
+  reviews that a single endpoint cannot show. Claiming "ML2" from registry values would overstate the
+  position, so Level Two results sit in their own section and the ML1 verdict is computed without them.
+- **Levels checked against the source.** LSA protection and Credential Guard are often called ML2
+  items, but ASD places them at Maturity Level Three. They are collected and labelled ML3 (not scored).
+- **ASR Audit mode is not enough.** An attack surface reduction rule in Audit or Warn mode records
+  or prompts but does not block, so only Block passes, the same reasoning as AppLocker audit mode.
 - **Fleet failures exclude manual controls.** "Not answered yet" is not the same as "broken", so the
   ranked fix list only counts FAIL and ERROR.
 
 ## What it does not do (say this before you are asked)
 
-- Maturity Level One only. ML2 and ML3 need more evidence (logging, centralised analysis).
+- The verdict is Maturity Level One only. Level Two is reported as readiness, and ML3 is not
+  assessed, because both need evidence one endpoint cannot give (central logging and analysis).
 - It assesses evidence from one machine at a time; the fleet command aggregates many files but does
   not collect them. At scale you would push the collector with Intune, SCCM or a GPO.
 - The NIST and ISO mappings are the author's indicative mappings, not an official crosswalk.
@@ -169,6 +179,12 @@ shows the ML1 count moving, which controls were fixed and, more importantly, any
 regressed. With `--fail-on-regression` the same command can run on a schedule and alert when a
 Group Policy change quietly undoes a control.
 
+**Why doesn't the tool say a machine is at Maturity Level Two?**
+Because ML2 is more than endpoint settings: it needs events centrally logged and analysed, privileged
+access revalidated every 12 months, and administration through jump servers. The tool checks what the
+endpoint can show (ASR rules, PowerShell logging, LAPS), asks the rest as manual controls, and calls
+the result "readiness". Overclaiming maturity is worse than reporting less.
+
 **How do you handle controls a script cannot see, like MFA?**
 They are marked MANUAL and block ML1 until someone answers them. `e8checker questionnaire` asks
 each one and records an evidence note (for example the Conditional Access policy name), so the
@@ -180,7 +196,7 @@ The collector is read-only and makes no network calls. Evidence files contain us
 software lists, so `.gitignore` keeps real ones out of the repository and `SECURITY.md` explains it.
 
 **How did you test it?**
-154 pytest cases with three synthetic hosts (weak, partial, hardened). Every automated check
+211 pytest cases with three synthetic hosts (weak, partial, hardened). Every automated check
 must pass on the hardened host, fail with a fix on the weak host, and not crash on empty evidence.
 Edge cases cover patch-window boundaries, audit mode, edition-specific lifecycle dates and
 injection attempts. CI runs the suite on Python 3.10 to 3.13 and runs the collector on a real

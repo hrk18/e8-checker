@@ -4,8 +4,8 @@
 ![Python](https://img.shields.io/badge/python-3.10%E2%80%933.13-blue)
 ![License: MIT](https://img.shields.io/badge/license-MIT-green)
 
-**Assess a Windows endpoint against the ASD Essential Eight (Maturity Level One), and see every
-finding mapped to NIST CSF 2.0 and ISO/IEC 27001:2022.**
+**Assess a Windows endpoint against the ASD Essential Eight (Maturity Level One, with opt-in Level Two
+readiness), and see every finding mapped to NIST CSF 2.0 and ISO/IEC 27001:2022.**
 
 The [Essential Eight](https://www.cyber.gov.au/business-government/asds-cyber-security-frameworks/essential-eight)
 is the Australian Signals Directorate's baseline of eight mitigation strategies, and the standard
@@ -27,7 +27,8 @@ Remediation priorities
 
 See full sample reports: [weak workstation](examples/report-weak.md) ·
 [hardened laptop](examples/report-hardened.md) · [HTML version](examples/report-hardened.html) ·
-[three-host fleet summary](examples/fleet-report.md)
+[three-host fleet summary](examples/fleet-report.md) ·
+[Level Two readiness](examples/report-partial-level2.md) · [changelog](CHANGELOG.md)
 
 ## How it works
 
@@ -81,6 +82,7 @@ e8checker list-checks
 | `-a, --answers FILE` | JSON answers for manual controls (`{"MF-01": {"answer": "yes", "note": "..."}}`) |
 | `-f, --format` | `markdown` (default), `html` or `json` |
 | `-o, --output FILE` | Write the report to a file instead of stdout |
+| `--level 2` | Add the Maturity Level Two readiness section (needs collector 0.2.0 evidence) |
 | `--fail-under N` | Exit with code 2 if fewer than N strategies reach ML1, for use in pipelines |
 
 ### Many machines at once
@@ -110,6 +112,28 @@ Each answer is validated (y / n / skip) and paired with an evidence note, such a
 Access policy name, a scan report or a ticket number. That note appears in the report beside the
 verdict, which is what an auditor asks for. The command refuses to overwrite an existing file
 unless you pass `--update` or `--force`, and it reads piped input, so scripted runs work too.
+
+### Maturity Level Two readiness
+
+```bash
+e8checker assess evidence.json -a answers.json --level 2
+e8checker questionnaire -o answers.json --update --level 2   # adds the four Level Two manual controls
+```
+
+`--level 2` adds 13 checks for the ML2 requirements an endpoint can evidence, worded from ASD's
+November 2023 maturity model:
+
+| Area | Level Two checks |
+| --- | --- |
+| Office macros | Win32 API calls from macros blocked (Defender ASR rule in Block mode) |
+| User application hardening | Office blocked from creating child processes, injecting code and creating executable content; PowerShell module, script block and transcription logging; command line process creation captured; central, protected logging (manual) |
+| Restrict admin privileges | Local administrator passwords managed by Windows LAPS (or legacy LAPS); 12-month revalidation, 45-day inactivity and jump servers (manual) |
+| Not scored | LSA protection and Credential Guard, which ASD places at Maturity Level Three |
+
+The results appear in their own "Level Two readiness" section and **never change the ML1 verdict**.
+The report says plainly that this is not an ML2 verdict: ML2 also needs central logging, event
+analysis and process controls that one endpoint cannot show. ASR rules in Audit or Warn mode fail,
+because they do not block anything.
 
 ### Measuring progress
 
@@ -164,20 +188,21 @@ explains the reasoning behind each design decision.
 ```
 collector/Collect-E8Evidence.ps1   Read-only evidence collector (PowerShell 5.1 and 7)
 e8checker/checks/                  One module per strategy; each check is a small pure function
+e8checker/checks/level2.py         Opt-in Maturity Level Two readiness checks
 e8checker/engine.py                Runs checks, applies answers, rolls up maturity
 e8checker/fleet.py                 Assesses many evidence files and ranks the most common failures
 e8checker/compare.py               Diffs two JSON reports: fixed, regressed, still open
 e8checker/questionnaire.py         Asks the 14 manual controls and writes answers.json
 e8checker/report/                  Markdown, HTML, JSON and CSV renderers
 e8checker/lifecycle.py             Windows end-of-servicing dates
-tests/                             pytest suite (154 cases) using synthetic evidence
+tests/                             pytest suite (211 cases) using synthetic evidence
 .github/workflows/ci.yml           Lint and test on Python 3.10-3.13; runs the collector on a real Windows runner
 ```
 
 ## Limitations
 
-- Maturity Level One only. ML2 and ML3 add requirements (for example event logging and
-  centralised analysis) that need more than one endpoint's evidence.
+- The verdict is Maturity Level One only. Level Two is reported as readiness, not a verdict, because
+  ML2 needs central logging and analysis that one endpoint's evidence cannot show. ML3 is not assessed.
 - Evidence is collected per machine; at scale, deploy the collector with Intune, SCCM or a GPO
   startup script and copy the JSON files to one share for `e8checker fleet`.
 - Nested domain groups in local Administrators are only expanded when the collector runs as the
@@ -189,7 +214,8 @@ tests/                             pytest suite (154 cases) using synthetic evid
 ## Roadmap
 
 - [x] Aggregate many evidence files into a fleet summary (Markdown, HTML and CSV)
-- [ ] Maturity Level Two checks (PowerShell logging, LSA protection, credential guard)
+- [x] Maturity Level Two readiness checks (ASR rules, PowerShell logging, LAPS)
+- [ ] Level Two readiness in the fleet summary
 - [ ] Intune / Microsoft Graph collector for cloud-managed devices
 
 ## Author
