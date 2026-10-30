@@ -1,6 +1,6 @@
 # Essential Eight assessment: FIN-LT-042
 
-Evidence collected 2026-10-20T10:40:00 | e8checker 0.1.0
+Evidence collected 2026-10-20T10:40:00 | e8checker 0.2.0
 
 **Result: 7 of 8 strategies meet Maturity Level One.**
 

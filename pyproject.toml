@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "e8checker"
-version = "0.1.0"
-description = "Assess a Windows endpoint against the ASD Essential Eight (Maturity Level One), with NIST CSF 2.0 and ISO 27001 mappings"
+version = "0.2.0"
+description = "Assess a Windows endpoint against the ASD Essential Eight (Maturity Level One, with opt-in Level Two readiness), with NIST CSF 2.0 and ISO 27001 mappings"
 readme = "README.md"
 license = { text = "MIT" }
 authors = [{ name = "Hrithik Kumar Chorwar" }]

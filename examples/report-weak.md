@@ -1,6 +1,6 @@
 # Essential Eight assessment: RECEPTION-PC01
 
-Evidence collected 2026-10-20T09:15:00 | e8checker 0.1.0
+Evidence collected 2026-10-20T09:15:00 | e8checker 0.2.0
 
 **Result: 0 of 8 strategies meet Maturity Level One.**
 
