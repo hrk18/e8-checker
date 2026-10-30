@@ -49,11 +49,13 @@ class Assessment:
     collected_at: str | None
     verdicts: list[StrategyVerdict]
     supporting: list[Result] = field(default_factory=list)
+    level2: list[Result] = field(default_factory=list)  # only filled when assessed with level=2
+    target_level: int = 1
     tool_version: str = __version__
 
     @property
     def all_results(self) -> list[Result]:
-        return [r for v in self.verdicts for r in v.results] + self.supporting
+        return [r for v in self.verdicts for r in v.results] + self.supporting + self.level2
 
     @property
     def strategies_at_ml1(self) -> int:
@@ -81,6 +83,8 @@ class Assessment:
                 for v in self.verdicts
             ],
             "supporting": [r.to_dict() for r in self.supporting],
+            # Level-one reports keep their original shape, so older tooling can still read them.
+            **({"target_level": 2, "level2": [r.to_dict() for r in self.level2]} if self.target_level >= 2 else {}),
         }
 
 
@@ -111,14 +115,28 @@ def _apply_answer(result: Result, answer: dict | None, remediation: str = "") ->
     return result
 
 
-def assess(evidence: Evidence, answers: dict[str, dict] | None = None) -> Assessment:
+def assess(evidence: Evidence, answers: dict[str, dict] | None = None, level: int = 1) -> Assessment:
+    """Run every check up to ``level``.
+
+    The maturity verdict always comes from the Level One checks. Level Two checks are reported
+    separately as readiness findings, because e8checker covers only part of ML2 (much of it is
+    about logging pipelines and processes that one endpoint cannot show).
+    """
+    if level not in (1, 2):
+        raise ValueError("level must be 1 or 2")
     answers = answers or {}
     by_strategy: dict[Strategy, list[Result]] = {s: [] for s in Strategy}
+    level2: list[Result] = []
     for spec in REGISTRY:
+        if spec.level > level:
+            continue
         result = spec.run(evidence)
         if spec.manual:
             result = _apply_answer(result, answers.get(spec.check_id), spec.remediation)
-        by_strategy[spec.strategy].append(result)
+        if spec.level == 1:
+            by_strategy[spec.strategy].append(result)
+        else:
+            level2.append(result)
 
     verdicts = [
         StrategyVerdict(s, sorted(by_strategy[s], key=lambda r: r.check_id))
@@ -131,4 +149,6 @@ def assess(evidence: Evidence, answers: dict[str, dict] | None = None) -> Assess
         collected_at=collected.isoformat() if collected else None,
         verdicts=verdicts,
         supporting=supporting,
+        level2=sorted(level2, key=lambda r: (_ORDER[r.strategy], r.check_id)),
+        target_level=level,
     )

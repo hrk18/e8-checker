@@ -7,7 +7,7 @@ from datetime import date, datetime
 from pathlib import Path
 from typing import Any
 
-SUPPORTED_SCHEMA = 1
+SUPPORTED_SCHEMAS = (1, 2)  # 2 adds the "ml2" section (collector 0.2.0); 1 is still read
 
 
 class EvidenceError(ValueError):
@@ -25,8 +25,9 @@ class Evidence:
         if not isinstance(data, dict):
             raise EvidenceError("Evidence must be a JSON object")
         schema = data.get("schema_version")
-        if schema != SUPPORTED_SCHEMA:
-            raise EvidenceError(f"Unsupported schema_version {schema!r}; expected {SUPPORTED_SCHEMA}")
+        if schema not in SUPPORTED_SCHEMAS:
+            expected = " or ".join(str(v) for v in SUPPORTED_SCHEMAS)
+            raise EvidenceError(f"Unsupported schema_version {schema!r}; expected {expected}")
         self._data = data
 
     @classmethod
@@ -59,6 +60,10 @@ class Evidence:
     @property
     def collected_at(self) -> datetime | None:
         return parse_date(self.get("collected_at"))
+
+    @property
+    def schema_version(self) -> int:
+        return int(self._data["schema_version"])
 
     @property
     def raw(self) -> dict[str, Any]:

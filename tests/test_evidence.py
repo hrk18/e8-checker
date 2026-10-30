@@ -48,3 +48,13 @@ def test_invalid_json_is_reported(tmp_path):
 )
 def test_parse_date(value, expected):
     assert parse_date(value) == expected
+
+
+def test_schema_2_evidence_is_accepted(hardened_data):
+    hardened_data["schema_version"] = 2
+    assert Evidence(hardened_data).schema_version == 2
+
+
+def test_schema_error_lists_supported_versions():
+    with pytest.raises(EvidenceError, match="expected 1 or 2"):
+        Evidence({"schema_version": 3})

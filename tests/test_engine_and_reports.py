@@ -1,5 +1,6 @@
 import json
 
+import pytest
 from conftest import EXAMPLES
 
 from e8checker.cli import main
@@ -98,3 +99,13 @@ def test_cli_reports_bad_input(tmp_path, capsys):
     bad.write_text("[]", encoding="utf-8")
     assert main(["assess", str(bad)]) == 1
     assert "error:" in capsys.readouterr().err
+
+
+def test_level_one_report_shape_is_unchanged(hardened, answers):
+    data = assess(hardened, answers).to_dict()
+    assert "level2" not in data and "target_level" not in data
+
+
+def test_level_must_be_one_or_two(hardened):
+    with pytest.raises(ValueError):
+        assess(hardened, level=3)
