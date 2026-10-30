@@ -42,6 +42,7 @@ def run_questionnaire(
     ask: Callable[[str], str],
     say: Callable[[str], None] = print,
     existing: dict[str, dict] | None = None,
+    level: int = 1,
 ) -> QuestionnaireResult:
     """Ask every manual control. Existing answers are offered as the default (press Enter to keep).
 
@@ -51,7 +52,7 @@ def run_questionnaire(
     existing = existing or {}
     answers: dict[str, dict] = {}
     skipped: list[str] = []
-    specs = manual_controls()
+    specs = manual_controls(level)
     current_strategy = None
 
     try:

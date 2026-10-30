@@ -27,6 +27,13 @@ def build_parser() -> argparse.ArgumentParser:
     run.add_argument("-f", "--format", choices=sorted(RENDERERS), default="markdown")
     run.add_argument("-o", "--output", type=Path, help="Write the report here (default: stdout)")
     run.add_argument(
+        "--level",
+        type=int,
+        choices=(1, 2),
+        default=1,
+        help="2 adds Maturity Level Two readiness checks (needs collector 0.2.0 evidence)",
+    )
+    run.add_argument(
         "--fail-under",
         type=int,
         metavar="N",
@@ -53,6 +60,7 @@ def build_parser() -> argparse.ArgumentParser:
     q.add_argument("-o", "--output", type=Path, required=True, help="Answers file to write")
     q.add_argument("--update", action="store_true", help="Start from the answers already in --output")
     q.add_argument("--force", action="store_true", help="Overwrite --output without reading it")
+    q.add_argument("--level", type=int, choices=(1, 2), default=1, help="2 also asks the Level Two manual controls")
 
     sub.add_parser("list-checks", help="List every check and its framework mappings")
     return parser
@@ -134,9 +142,9 @@ def _questionnaire(args: argparse.Namespace) -> int:
             print(f"error: {args.output} exists; use --update to edit it or --force to replace it", file=sys.stderr)
             return 1
 
-    print(f"{len(manual_controls())} controls cannot be checked from an endpoint. Answer each one;")
+    print(f"{len(manual_controls(args.level))} controls cannot be checked from an endpoint. Answer each one;")
     print("note the evidence (policy name, report, ticket number) an auditor would ask for.")
-    result = run_questionnaire(input, print, existing)
+    result = run_questionnaire(input, print, existing, level=args.level)
 
     args.output.write_text(json.dumps(result.answers, indent=2) + "\n", encoding="utf-8")
     if not result.complete:
@@ -166,7 +174,7 @@ def main(argv: list[str] | None = None) -> int:
         print(f"error: {exc}", file=sys.stderr)
         return 1
 
-    assessment = assess(evidence, answers)
+    assessment = assess(evidence, answers, level=args.level)
     _write(
         RENDERERS[args.format](assessment),
         args.output,

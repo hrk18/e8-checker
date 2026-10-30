@@ -3,7 +3,13 @@
 from __future__ import annotations
 
 from e8checker.engine import Assessment
-from e8checker.models import Result, Status
+from e8checker.models import Result, Status, Strategy
+
+LEVEL2_NOTE = (
+    "These checks cover the Maturity Level Two requirements that one endpoint can evidence. They are not "
+    "an ML2 verdict: ML2 also needs central logging, event analysis and process controls that this report "
+    "cannot see, and every Level One requirement must be met first."
+)
 
 ICON = {
     Status.PASS: "PASS",
@@ -62,6 +68,36 @@ def render_markdown(a: Assessment) -> str:
     header = ["| ID | Control | Status | Severity | Detail | Mappings |", "| --- | --- | --- | --- | --- | --- |"]
     for v in a.verdicts:
         lines += ["", f"## {v.strategy.value}", "", *header, *(_row(r) for r in v.results)]
+
+    if a.target_level >= 2 and a.level2:
+        ml2 = [r for r in a.level2 if r.strategy is not Strategy.SUPPORTING]
+        ml3 = [r for r in a.level2 if r.strategy is Strategy.SUPPORTING]
+        failing = sum(r.status in (Status.FAIL, Status.ERROR) for r in ml2)
+        manual = sum(r.status is Status.MANUAL for r in ml2)
+        passed = sum(r.status in (Status.PASS, Status.NOT_APPLICABLE) for r in ml2)
+        lines += [
+            "",
+            "## Level Two readiness",
+            "",
+            LEVEL2_NOTE,
+            "",
+            f"**{passed} passed, {failing} failed, {manual} need an assessor's answer.**",
+            "",
+            *header,
+            *(_row(r) for r in ml2),
+        ]
+        if fixes2 := _findings(ml2):
+            lines += ["", "### Level Two fixes", "", *fixes2]
+        if ml3:
+            lines += [
+                "",
+                "### Maturity Level Three items (not scored)",
+                "",
+                "Collected alongside the Level Two evidence because they protect the same credentials.",
+                "",
+                *header,
+                *(_row(r) for r in ml3),
+            ]
 
     if a.supporting:
         lines += [

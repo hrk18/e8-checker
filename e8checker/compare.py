@@ -69,7 +69,7 @@ def load_report(path: str | Path) -> dict:
 
 def _index(report: dict) -> dict[str, dict]:
     results = [r for s in report.get("strategies", []) for r in s.get("results", [])]
-    results += report.get("supporting", [])
+    results += report.get("supporting", []) + report.get("level2", [])
     return {r["check_id"]: r for r in results}
 
 

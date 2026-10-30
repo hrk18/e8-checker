@@ -10,7 +10,8 @@ from html import escape
 
 from e8checker.engine import Assessment
 from e8checker.mappings import describe_iso, describe_nist
-from e8checker.models import Result, Status
+from e8checker.models import Result, Status, Strategy
+from e8checker.report.markdown import LEVEL2_NOTE
 
 STYLE = """
 :root { --pass:#1a7f37; --fail:#cf222e; --manual:#9a6700; --na:#57606a; --bg:#fff; --fg:#1f2328; --line:#d0d7de; }
@@ -62,6 +63,13 @@ def render_html(a: Assessment) -> str:
     sections = "".join(
         f"<h2>{escape(v.strategy.value)}</h2><table>{_HEAD}{_rows(v.results)}</table>" for v in a.verdicts
     )
+    level2 = ""
+    if a.target_level >= 2 and a.level2:
+        ml2 = [r for r in a.level2 if r.strategy is not Strategy.SUPPORTING]
+        ml3 = [r for r in a.level2 if r.strategy is Strategy.SUPPORTING]
+        level2 = f"<h2>Level Two readiness</h2><p>{escape(LEVEL2_NOTE)}</p><table>{_HEAD}{_rows(ml2)}</table>"
+        if ml3:
+            level2 += f"<h3>Maturity Level Three items (not scored)</h3><table>{_HEAD}{_rows(ml3)}</table>"
     supporting = ""
     if a.supporting:
         supporting = (
@@ -76,7 +84,7 @@ def render_html(a: Assessment) -> str:
 <p class="meta">Evidence collected {escape(a.collected_at or "at an unknown time")} &middot; e8checker {escape(a.tool_version)}</p>
 <p class="score">{a.strategies_at_ml1} of {len(a.verdicts)} strategies meet Maturity Level One</p>
 <table><tr><th>Strategy</th><th>Verdict</th><th>Pass</th><th>Fail</th><th>Manual</th></tr>{summary}</table>
-{sections}{supporting}
+{sections}{level2}{supporting}
 <p class="meta">Framework mappings are indicative, not an official ASD, NIST or ISO crosswalk.</p>
 </body></html>
 """
