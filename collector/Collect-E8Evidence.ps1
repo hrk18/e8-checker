@@ -7,6 +7,10 @@
     status, Office macro policies, browser policies, Defender, firewall and BitLocker state,
     and writes them to a JSON file for e8checker to analyse.
 
+    Evidence schema 2 (collector 0.2.0) adds an "ml2" section for Maturity Level Two readiness:
+    Defender attack surface reduction rules, PowerShell logging policy, process creation
+    auditing, LAPS, LSA protection and Credential Guard.
+
     The script only reads configuration. It changes nothing on the machine and sends nothing
     over the network. Run it from an elevated PowerShell prompt for complete results
     (BitLocker and Windows optional features need administrator rights).
@@ -28,7 +32,7 @@ param(
 
 Set-StrictMode -Version 2.0
 $ErrorActionPreference = 'Stop'
-$CollectorVersion = '0.1.0'
+$CollectorVersion = '0.2.0'
 $AdminsSid = 'S-1-5-32-544'
 $OfficeApps = @('Word', 'Excel', 'PowerPoint')
 
@@ -58,6 +62,12 @@ function Get-RegValue {
 function Test-IsElevated {
     $principal = New-Object Security.Principal.WindowsPrincipal([Security.Principal.WindowsIdentity]::GetCurrent())
     $principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
+}
+
+function ConvertTo-IntOrNull {
+    param($Value)
+    if ($null -eq $Value -or "$Value" -eq '') { return $null }
+    try { [int]$Value } catch { $null }
 }
 
 function ConvertTo-IsoDate {
@@ -345,12 +355,85 @@ function Get-BitLockerState {
 }
 
 # ---------------------------------------------------------------------------------------------
+# Maturity Level Two readiness (schema 2)
+# ---------------------------------------------------------------------------------------------
+
+function Get-AsrRules {
+    <# Returns @{ <rule guid, lower case> = <action> } where 0 = off, 1 = Block, 2 = Audit, 6 = Warn. #>
+    $rules = [ordered]@{}
+    $pref = Invoke-Safely -What 'Get-MpPreference' -Script { Get-MpPreference }
+    if ($pref -and $pref.AttackSurfaceReductionRules_Ids) {
+        $ids = @($pref.AttackSurfaceReductionRules_Ids)
+        $actions = @($pref.AttackSurfaceReductionRules_Actions)
+        for ($i = 0; $i -lt $ids.Count; $i++) {
+            $action = if ($i -lt $actions.Count) { ConvertTo-IntOrNull $actions[$i] } else { $null }
+            $rules["$($ids[$i])".ToLower()] = $action
+        }
+    }
+    if ($rules.Count -eq 0) {
+        # Defender cmdlets can be unavailable (third-party AV, Server Core); read the policy instead.
+        $key = 'HKLM:\SOFTWARE\Policies\Microsoft\Windows Defender\Windows Defender Exploit Guard\ASR\Rules'
+        if (Test-Path -LiteralPath $key) {
+            $props = Get-ItemProperty -LiteralPath $key
+            foreach ($prop in $props.PSObject.Properties) {
+                if ($prop.Name -match '^[0-9a-fA-F-]{36}$') { $rules[$prop.Name.ToLower()] = ConvertTo-IntOrNull $prop.Value }
+            }
+        }
+    }
+    $rules
+}
+
+function Get-ProcessCreationAudit {
+    <# True when 'Audit Process Creation' records Success events. Needs an elevated prompt.
+       The subcategory GUID is used so the query works on non-English Windows. #>
+    Invoke-Safely -What 'auditpol' -Script {
+        $csv = & auditpol.exe /get '/subcategory:{0CCE922B-69AE-11D9-BED3-505054503030}' /r | Where-Object { $_ } | ConvertFrom-Csv
+        $setting = @($csv)[0].'Inclusion Setting'
+        if ($null -eq $setting) { $null } else { [bool]("$setting" -match 'Success') }
+    }
+}
+
+function Get-Ml2State {
+    $psPolicy = 'HKLM:\SOFTWARE\Policies\Microsoft\Windows\PowerShell'
+    $lapsBackup = $null
+    foreach ($path in 'HKLM:\SOFTWARE\Microsoft\Policies\LAPS', 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\LAPS') {
+        $value = ConvertTo-IntOrNull (Get-RegValue $path 'BackupDirectory')
+        if ($null -ne $value) { $lapsBackup = $value; break }
+    }
+    $dg = Invoke-Safely -What 'Win32_DeviceGuard' -Script {
+        Get-CimInstance -Namespace 'root\Microsoft\Windows\DeviceGuard' -ClassName Win32_DeviceGuard
+    }
+    # SecurityServicesRunning contains 1 when Credential Guard is running.
+    $credentialGuard = [bool]($dg -and ($dg.PSObject.Properties.Name -contains 'SecurityServicesRunning') -and
+        (@($dg.SecurityServicesRunning) -contains 1))
+
+    [ordered]@{
+        asr_rules                = Get-AsrRules
+        powershell_logging       = [ordered]@{
+            module        = ConvertTo-IntOrNull (Get-RegValue "$psPolicy\ModuleLogging" 'EnableModuleLogging')
+            script_block  = ConvertTo-IntOrNull (Get-RegValue "$psPolicy\ScriptBlockLogging" 'EnableScriptBlockLogging')
+            transcription = ConvertTo-IntOrNull (Get-RegValue "$psPolicy\Transcription" 'EnableTranscripting')
+        }
+        process_creation         = [ordered]@{
+            audit_success        = Get-ProcessCreationAudit
+            include_command_line = ConvertTo-IntOrNull (Get-RegValue 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System\Audit' 'ProcessCreationIncludeCmdLine_Enabled')
+        }
+        laps                     = [ordered]@{
+            windows_laps_backup_directory = $lapsBackup
+            legacy_admpwd_enabled         = ConvertTo-IntOrNull (Get-RegValue 'HKLM:\SOFTWARE\Policies\Microsoft Services\AdmPwd' 'AdmPwdEnabled')
+        }
+        lsa_run_as_ppl           = ConvertTo-IntOrNull (Get-RegValue 'HKLM:\SYSTEM\CurrentControlSet\Control\Lsa' 'RunAsPPL')
+        credential_guard_running = $credentialGuard
+    }
+}
+
+# ---------------------------------------------------------------------------------------------
 # Main
 # ---------------------------------------------------------------------------------------------
 
 $elevated = Test-IsElevated
 if (-not $elevated) {
-    Write-Warning 'Not running elevated: BitLocker and Internet Explorer feature state may be missing.'
+    Write-Warning 'Not running elevated: BitLocker, Internet Explorer and process auditing state may be missing.'
 }
 
 Write-Host 'Collecting Essential Eight evidence (read-only)...'
@@ -360,7 +443,7 @@ $os = Get-OsInfo
 $software = @(Get-InstalledSoftware -UserSid $user.Sid)
 
 $evidence = [ordered]@{
-    schema_version    = 1
+    schema_version    = 2
     collector_version = $CollectorVersion
     collected_at      = (Get-Date).ToString('s')
     host              = [ordered]@{
@@ -382,6 +465,7 @@ $evidence = [ordered]@{
     defender          = Get-DefenderState
     firewall          = Get-FirewallState
     bitlocker         = Get-BitLockerState
+    ml2               = Get-Ml2State
 }
 
 $json = $evidence | ConvertTo-Json -Depth 8
