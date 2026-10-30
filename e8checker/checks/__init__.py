@@ -4,6 +4,7 @@ from e8checker.checks import (  # noqa: F401  (imported for their registration s
     admin,
     app_control,
     hardening,
+    level2,
     office_macros,
     organisational,
     patching,

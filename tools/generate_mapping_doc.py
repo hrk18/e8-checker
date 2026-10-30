@@ -25,26 +25,27 @@ def render() -> str:
         "",
         "Generated from the check registry by `tools/generate_mapping_doc.py`. Do not edit by hand.",
         "",
-        "Every check maps to an ASD Essential Eight Maturity Level One requirement (or a supporting control),",
-        "a NIST Cybersecurity Framework 2.0 subcategory and an ISO/IEC 27001:2022 Annex A control.",
+        "Every check maps to an ASD Essential Eight requirement (or a supporting control), a NIST",
+        "Cybersecurity Framework 2.0 subcategory and an ISO/IEC 27001:2022 Annex A control. Level 2 checks",
+        "run only with `--level 2` and are reported as readiness findings, not as an ML2 verdict.",
         "The NIST and ISO mappings are indicative, not an official crosswalk.",
         "",
     ]
     for strategy in Strategy:
-        specs = sorted((s for s in REGISTRY if s.strategy is strategy), key=lambda s: s.check_id)
+        specs = sorted((s for s in REGISTRY if s.strategy is strategy), key=lambda s: (s.level, s.check_id))
         if not specs:
             continue
         lines += [
             f"## {strategy.value}",
             "",
-            "| ID | Type | Control | Severity | NIST CSF 2.0 | ISO 27001:2022 |",
-            "| --- | --- | --- | --- | --- | --- |",
+            "| ID | Level | Type | Control | Severity | NIST CSF 2.0 | ISO 27001:2022 |",
+            "| --- | --- | --- | --- | --- | --- | --- |",
         ]
         for s in specs:
             nist = "<br>".join(f"{c} {describe_nist(c)}" for c in s.nist_csf)
             iso = "<br>".join(f"A.{c} {describe_iso(c)}" for c in s.iso27001)
             kind = "Manual" if s.manual else "Automated"
-            lines.append(f"| {s.check_id} | {kind} | {s.title} | {s.severity.value} | {nist} | {iso} |")
+            lines.append(f"| {s.check_id} | {s.level} | {kind} | {s.title} | {s.severity.value} | {nist} | {iso} |")
         lines.append("")
     return "\n".join(lines)
 

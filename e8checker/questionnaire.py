@@ -29,12 +29,13 @@ class QuestionnaireResult:
     complete: bool  # False when input ran out before every question was asked
 
 
-def manual_controls() -> list[CheckSpec]:
-    """The organisational controls, in ASD strategy order then check ID."""
+def manual_controls(level: int = 1) -> list[CheckSpec]:
+    """The organisational controls up to ``level``, in ASD strategy order then check ID."""
     from e8checker.models import Strategy
 
     order = {s: i for i, s in enumerate(Strategy)}
-    return sorted((s for s in REGISTRY if s.manual), key=lambda s: (order[s.strategy], s.check_id))
+    specs = (s for s in REGISTRY if s.manual and s.level <= level)
+    return sorted(specs, key=lambda s: (s.level, order[s.strategy], s.check_id))
 
 
 def run_questionnaire(
