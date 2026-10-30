@@ -1,6 +1,6 @@
 {
-  "schema_version": 1,
-  "collector_version": "0.1.0",
+  "schema_version": 2,
+  "collector_version": "0.2.0",
   "collected_at": "2026-10-20T10:40:00",
   "host": {
     "hostname": "FIN-LT-042",
@@ -70,5 +70,28 @@
     {"profile": "Private", "enabled": true},
     {"profile": "Public", "enabled": true}
   ],
-  "bitlocker": {"os_volume_protection": "On"}
+  "bitlocker": {"os_volume_protection": "On"},
+  "ml2": {
+    "asr_rules": {
+      "92e97fa1-2edf-4476-bdd6-9dd0b4dddc7b": 1,
+      "d4f940ab-401b-4efc-aadc-ad5f3c50688a": 1,
+      "75668c1f-73b5-4cf0-bb93-3ecf5cb7cc84": 1,
+      "3b576869-a4ec-4529-8536-b80a7769e899": 1
+    },
+    "powershell_logging": {
+      "module": 1,
+      "script_block": 1,
+      "transcription": 1
+    },
+    "process_creation": {
+      "audit_success": true,
+      "include_command_line": 1
+    },
+    "laps": {
+      "windows_laps_backup_directory": 1,
+      "legacy_admpwd_enabled": null
+    },
+    "lsa_run_as_ppl": 2,
+    "credential_guard_running": true
+  }
 }
